@@ -1,18 +1,18 @@
 // 飞书多维表格看板：期数、平台发布、每日流量、知识站每日、渠道转化。中控单向写入，按 key 更新不重复。
-import fs from 'node:fs'; import path from 'node:path'; import { execFile } from 'node:child_process'; import { fileURLToPath } from 'node:url';
+import fs from 'node:fs'; import path from 'node:path'; import { execFile } from 'node:child_process';
 import { db, NAMES, STATE_CN, episodes, getTasks, setMeta } from './db.mjs';
 import { config } from './feishu.mjs';
 import { evaluate, withTab } from './driver.mjs';
 import { SITE } from './site.mjs';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+import { STATE_ROOT, ensureState } from './paths.mjs';
 const B = config.board;
 const SRC = { twitter: 'X', bilibili: 'B站', douyin: '抖音', xiaohongshu: '小红书', coze: 'Coze 官方', friend: '朋友推荐', youtube: 'YouTube', ai_search: 'AI 搜索', creator: '博主推荐', offline: '线下活动', wechat: '微信', wechat_miniapp: '微信小程序', other: '其他渠道', unknown: '未填写' };
 
 function lark(args, body) {
-  const f = path.join(ROOT, 'data', `board-${process.pid}.json`);
+  ensureState();
+  const f = path.join(STATE_ROOT, 'data', `board-${process.pid}.json`);
   fs.writeFileSync(f, JSON.stringify(body));
-  return new Promise((res, rej) => execFile('lark-cli', [...args, '--json', `@./data/${path.basename(f)}`, '--as', 'user'], { cwd: ROOT, maxBuffer: 20e6 }, (err, out, errOut) => {
+  return new Promise((res, rej) => execFile('lark-cli', [...args, '--json', `@./data/${path.basename(f)}`, '--as', 'user'], { cwd: STATE_ROOT, maxBuffer: 20e6 }, (err, out, errOut) => {
     fs.rmSync(f, { force: true });
     let j = null; try { j = JSON.parse(out); } catch { /* 不是 JSON */ }
     if (j && j.ok) return res(j.data);

@@ -1,0 +1,17 @@
+[Unit]
+Description=麦田远程隧道
+Documentation=file:///opt/maitian/docs/ubuntu.md
+After=network-online.target maitian.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/maitian
+ExecStart=/usr/bin/maitian tunnel
+Restart=always
+RestartSec=60
+Environment=MAITIAN_STATE=%h/.local/share/maitian
+Environment=PATH=/opt/maitian/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=default.target

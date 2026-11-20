@@ -2,7 +2,8 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="MIT" /></a>
-  <img src="https://img.shields.io/badge/macOS-only-1c1a16?logo=apple" alt="macOS" />
+  <img src="https://img.shields.io/badge/macOS-supported-1c1a16?logo=apple" alt="macOS" />
+  <img src="https://img.shields.io/badge/Ubuntu-22.04%20%2F%2024.04%20amd64-E95420?logo=ubuntu&logoColor=white" alt="Ubuntu" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A5%2022.5-5FA04E?logo=nodedotjs&logoColor=white" alt="Node 22.5+" />
   <a href="https://github.com/CzzzzzzJ/mdldm-maitian-publisher"><img src="https://img.shields.io/badge/Chrome-麦田发布助手-F2B21B?logo=googlechrome&logoColor=white" alt="麦田发布助手" /></a>
   <a href="https://github.com/CzzzzzzJ/mdldm-maitian/stargazers"><img src="https://img.shields.io/github/stars/CzzzzzzJ/mdldm-maitian?style=social" alt="Stars" /></a>
@@ -50,13 +51,17 @@
 
 链路：成片 → skill 写「发布素材.md」→ 生成 `publish.json` → `hub plan` 进分发计划 → `hub run` 分批填写 → 国内平台你点发布 → 到点取链接 → 每天采数据 → 大屏和飞书卡片。
 
+## Ubuntu
+
+macOS 的用法不变。Ubuntu 22.04 / 24.04 amd64 见 [docs/ubuntu.md](docs/ubuntu.md)：deb 安装包、systemd 用户服务、Linux 上的专用 Chrome 和 NAS 挂载。七个平台的填写仍走麦田发布助手，没有改成空实现。
+
 ## 一行装好
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/CzzzzzzJ/mdldm-maitian/main/scripts/install.sh)"
 ```
 
-下载麦田和发布助手到 `~/maitian/`、接上发布 skill、打开安装向导；向导问完几个问题，生成配置、装好开机自启、打开各平台登录页。需要 macOS、Node.js ≥ 22.5、Google Chrome。
+下载麦田和发布助手到 `~/maitian/`、接上发布 skill、打开安装向导；向导问完几个问题，生成配置、装好开机自启、打开各平台登录页。macOS 需要 Node.js ≥ 22.5 和 Google Chrome。Ubuntu 不要用这条命令代替安装包，请看 [docs/ubuntu.md](docs/ubuntu.md)。
 
 <p align="center"><img src="https://github.com/CzzzzzzJ/mdldm-maitian/releases/download/media/maitian-install.gif" width="720" alt="一行安装演示" /></p>
 

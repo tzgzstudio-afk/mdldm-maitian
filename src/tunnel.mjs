@@ -6,11 +6,14 @@
 import { spawn } from 'child_process';
 import fs from 'fs'; import path from 'path';
 import { notify, config } from './feishu.mjs';
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const OUT = path.join(ROOT, 'data', 'tunnel.json');
+import { STATE_ROOT, ensureState } from './paths.mjs';
+import { cloudflaredBin } from './platform.mjs';
+ensureState();
+const OUT = path.join(STATE_ROOT, 'data', 'tunnel.json');
 const port = config.web?.port || 8787, key = config.web?.key;
 const named = config.tunnel?.name && config.tunnel?.hostname;
-const CF = config.tunnel?.bin || '/opt/homebrew/bin/cloudflared';
+const CF = cloudflaredBin(config.tunnel?.bin);
+if (!CF) { console.error('没找到 cloudflared。macOS 可用 brew install cloudflared；Ubuntu 可安装官方 deb 或 snap，也可以在 config.json 的 tunnel.bin 写绝对路径。'); process.exit(1); }
 // QUIC 在不少网络下被拦，统一走 http2
 const args = named
   ? ['tunnel', '--no-autoupdate', '--protocol', 'http2', 'run', '--url', `http://127.0.0.1:${port}`, config.tunnel.name]

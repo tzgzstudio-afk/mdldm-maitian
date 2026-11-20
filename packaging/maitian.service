@@ -1,0 +1,17 @@
+[Unit]
+Description=麦田发布中控
+Documentation=file:///opt/maitian/docs/ubuntu.md
+After=network-online.target graphical-session.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/maitian
+ExecStart=/usr/bin/maitian daemon
+Restart=always
+RestartSec=60
+Environment=MAITIAN_STATE=%h/.local/share/maitian
+Environment=PATH=/opt/maitian/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=default.target

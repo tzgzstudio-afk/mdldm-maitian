@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=麦田
+GenericName=自媒体发布中控
+Comment=打开麦田网页。守护进程没启动时，先运行 maitian web 或 systemctl --user start maitian
+Exec=maitian desktop
+Icon=maitian
+Terminal=false
+Type=Application
+Categories=Network;Utility;
+StartupNotify=false

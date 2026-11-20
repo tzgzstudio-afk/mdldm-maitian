@@ -1,6 +1,7 @@
 // 通过插件的开发桥（tools/bridge-server.mjs + 面板页）指挥 Chrome
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { config } from './feishu.mjs';
+import { openInChrome } from './platform.mjs';
 export const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 export async function call(cmd, timeout = 30000) {
@@ -22,11 +23,11 @@ export async function ensureBridge() {
   let listening = true;
   try { await fetch(config.bridge, { signal: AbortSignal.timeout(2000) }); } catch { listening = false; }
   if (!listening) {
-    spawn('node', ['tools/bridge-server.mjs'], { cwd: config.pluginDir, detached: true, stdio: 'ignore' }).unref();
+    spawn(process.execPath, ['tools/bridge-server.mjs'], { cwd: config.pluginDir, detached: true, stdio: 'ignore' }).unref();
     await sleep(1500);
   }
   if (await ping()) return;
-  execFileSync('open', ['-g', '-a', 'Google Chrome', `chrome-extension://${config.extensionId}/sidepanel.html`]);
+  openInChrome(`chrome-extension://${config.extensionId}/sidepanel.html`, { background: true });
   for (let i = 0; i < 10; i++) { await sleep(2000); if (await ping()) return; }
   throw new Error('插件面板没有响应：Chrome 可能有弹窗卡住，或插件没加载');
 }

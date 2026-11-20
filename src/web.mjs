@@ -1,5 +1,7 @@
 // 麦田：本地网页。播种（发布）、长势（流量）、收成（转化）、粮仓（档案）
-import http from 'node:http'; import crypto from 'node:crypto'; import fs from 'node:fs'; import path from 'node:path'; import { spawn, execFileSync } from 'node:child_process'; import { fileURLToPath } from 'node:url';
+import http from 'node:http'; import crypto from 'node:crypto'; import fs from 'node:fs'; import path from 'node:path'; import { spawn } from 'node:child_process'; import { fileURLToPath } from 'node:url';
+import { APP_ROOT, STATE_ROOT, ensureState } from './paths.mjs';
+import { makeThumbnail } from './platform.mjs';
 import { db, NAMES, STATE_CN, episodes, getEpisode, getTasks, recentLogs, getSnapshot, getMeta } from './db.mjs';
 import { config } from './feishu.mjs';
 import { SITE } from './site.mjs';
@@ -7,7 +9,8 @@ import { review } from './review.mjs';
 import { accessEmail } from './access.mjs';
 import { initLogin, sessionOk, handleLogin } from './login.mjs';
 
-const DIR = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(DIR, '..');
+const DIR = path.dirname(fileURLToPath(import.meta.url));
+const resolveState = (p) => path.isAbsolute(p) ? p : path.resolve(STATE_ROOT, p);
 const W = config.web || { port: 8787, key: '' };
 const send = (res, code, body, type = 'application/json; charset=utf-8', extra = {}) => { res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store', ...extra }); res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body)); };
 const readPj = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'publish.json'), 'utf8')); } catch { return null; } };
@@ -53,8 +56,8 @@ async function chromeUp() { try { const r = await fetch(`http://127.0.0.1:${conf
 
 function widgetScript(req, file) {
   let base = `${req.headers['x-forwarded-proto'] || (req.headers['cf-visitor'] ? 'https' : 'http')}://${req.headers.host}`;
-  try { base = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'tunnel.json'), 'utf8')).base || base; } catch {}
-  return fs.readFileSync(path.join(ROOT, 'scripts', 'widget', file), 'utf8').replace('__MAITIAN_URL__', base).replace('__WIDGET_TOKEN__', W.widgetToken);
+  try { base = JSON.parse(fs.readFileSync(path.join(STATE_ROOT, 'data', 'tunnel.json'), 'utf8')).base || base; } catch {}
+  return fs.readFileSync(path.join(APP_ROOT, 'scripts', 'widget', file), 'utf8').replace('__MAITIAN_URL__', base).replace('__WIDGET_TOKEN__', W.widgetToken);
 }
 const latestPublished = () => episodes().filter(e => e.schedule && Date.parse(e.schedule) <= Date.now()).sort((a, b) => Date.parse(b.schedule) - Date.parse(a.schedule))[0];
 // 手机小组件：只读汇总（粉丝、涨幅、最新一期播放、站点近 7 天），用单独的 config.web.widgetToken，只能读这一个接口
@@ -90,14 +93,13 @@ button{width:100%;height:50px;border:0;border-radius:14px;background:#1c1a16;col
 <pre id="c"></pre><script>const code=${JSON.stringify(code).replace(/</g, '\\u003c')};document.getElementById('c').textContent=code;
 document.getElementById('b').onclick=async()=>{try{await navigator.clipboard.writeText(code);b.textContent='已复制 ✓';}catch{const r=document.createRange();r.selectNodeContents(c);getSelection().removeAllRanges();getSelection().addRange(r);b.textContent='长按选中的文字复制';}};</script></body></html>`;
 
-// 缩略图：macOS 自带 sips 缩放转 JPEG，按 原文件路径+修改时间+尺寸 缓存；失败返回 null（退回原图）
+// 缩略图：macOS 用 sips，Linux 用 ffmpeg 或 ImageMagick。按 原文件路径+修改时间+尺寸 缓存；失败返回 null（退回原图）
 function thumb(f, w) {
   try {
-    const st = fs.statSync(f), dir = path.join(ROOT, 'data', 'thumbs');
+    const st = fs.statSync(f), dir = path.join(STATE_ROOT, 'data', 'thumbs');
     const out = path.join(dir, crypto.createHash('sha1').update(`${f}|${st.mtimeMs}|${w}`).digest('hex') + '.jpg');
     if (fs.existsSync(out)) return out;
-    fs.mkdirSync(dir, { recursive: true });
-    execFileSync('/usr/bin/sips', ['-Z', String(w), '-s', 'format', 'jpeg', '-s', 'formatOptions', '78', f, '--out', out], { stdio: 'ignore', timeout: 20000 });
+    makeThumbnail(f, out, w);
     return fs.existsSync(out) ? out : null;
   } catch { return null; }
 }
@@ -109,7 +111,7 @@ async function handle(req, res) {
   if (u.pathname === '/api/widget/img') {   // 小组件图片：头像（config.web.avatar）或最新一期封面缩略图，同一个只读口令
     if (!W.widgetToken || !tokenEq(u.searchParams.get('t'), W.widgetToken)) return send(res, 401, '');
     let f = null;
-    if (u.searchParams.get('k') === 'avatar') f = W.avatar && path.resolve(ROOT, W.avatar);
+    if (u.searchParams.get('k') === 'avatar') f = W.avatar && resolveState(W.avatar);
     else { const ep = latestPublished(); const pj = ep && (readPj(ep.dir) || {}); const rel = pj && ((pj.covers || {})[u.searchParams.get('k') || '4x3'] || Object.values(pj.covers || {})[0]); f = rel && path.join(ep.dir, rel); }
     if (!f || !fs.existsSync(f)) return send(res, 404, '');
     const t = thumb(f, Math.min(800, +u.searchParams.get('w') || 400));
@@ -145,7 +147,7 @@ async function handle(req, res) {
       samples: db.prepare('SELECT ts, episode_id, platform, views FROM samples ORDER BY ts').all(),
       feed: feed(), health: { nas: fs.existsSync(config.rootPath), chrome: await chromeUp(), metricsDay: getMeta('metricsDay') || '', doctorDay: getMeta('doctorDay') || '', login: Object.fromEntries((config.keepAlive || []).map(k => [k, getMeta(`login:${k}`) || '']) ) }, now: new Date().toISOString() });
   }
-  if (u.pathname === '/site-logo') { const f = SITE && config.site.logo && path.resolve(ROOT, config.site.logo); return f && fs.existsSync(f) ? send(res, 200, fs.readFileSync(f), /\.svg$/.test(f) ? 'image/svg+xml' : /\.jpe?g$/.test(f) ? 'image/jpeg' : 'image/png', { 'cache-control': 'max-age=3600' }) : send(res, 404, ''); }
+  if (u.pathname === '/site-logo') { const f = SITE && config.site.logo && resolveState(config.site.logo); return f && fs.existsSync(f) ? send(res, 200, fs.readFileSync(f), /\.svg$/.test(f) ? 'image/svg+xml' : /\.jpe?g$/.test(f) ? 'image/jpeg' : 'image/png', { 'cache-control': 'max-age=3600' }) : send(res, 404, ''); }
   if (u.pathname === '/api/episode') { const ep = getEpisode(u.searchParams.get('id')); return ep ? send(res, 200, episodeView(ep, true)) : send(res, 404, { error: '没有这一期' }); }
   if (u.pathname === '/cover' || u.pathname === '/shot') {
     const ep = getEpisode(u.searchParams.get('id')); if (!ep) return send(res, 404, '');
@@ -168,7 +170,7 @@ async function handle(req, res) {
       if (actions.some(x => !x.done && x.type !== 'mark') && a.type !== 'mark') return send(res, 409, { error: '上一个操作还在跑，等它结束' });
       const rec = { type: a.type, label: { sync: '取链接', metrics: '采流量', doctor: '体检', board: '同步知识站数据', followers: '采粉丝', mark: '标记状态', retry: '重跑平台' }[a.type] + (a.platform ? ` · ${NAMES[a.platform] || a.platform}` : ''), startedAt: new Date().toISOString(), done: false, ok: null, tail: '' };
       actions.push(rec);
-      const ch = spawn(process.execPath, [path.join(DIR, 'hub.mjs'), ...argv], { cwd: ROOT, env: { ...process.env, HUB_NO_WEB: '1' } });
+      const ch = spawn(process.execPath, [path.join(DIR, 'hub.mjs'), ...argv], { cwd: APP_ROOT, env: { ...process.env, HUB_NO_WEB: '1', MAITIAN_STATE: STATE_ROOT } });
       const on = (d) => { rec.tail = (rec.tail + d).slice(-600); }; ch.stdout.on('data', on); ch.stderr.on('data', on);
       ch.on('close', (code) => { rec.done = true; rec.ok = code === 0; rec.endedAt = new Date().toISOString(); });
       send(res, 200, { ok: true });
@@ -178,8 +180,9 @@ async function handle(req, res) {
   send(res, 404, { error: 'not found' });
 }
 export function startWeb() {
+  ensureState();
   const srv = http.createServer((req, res) => { handle(req, res).catch((e) => { try { send(res, 500, { error: e.message }); } catch {} }); });
-  initLogin(ROOT);
+  initLogin(STATE_ROOT);
   srv.listen(W.port, '0.0.0.0', () => console.log(`麦田网页：http://localhost:${W.port}/?key=${W.key}`));
   srv.on('error', (e) => console.error('麦田网页没起来：' + e.message));
   return srv;

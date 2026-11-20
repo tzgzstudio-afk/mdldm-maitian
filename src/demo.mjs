@@ -2,10 +2,10 @@
 //   node src/demo.mjs            生成 demo/ 目录（假配置、假数据库、假工程和封面），在 http://localhost:8788/?key=demo 打开
 //   node src/demo.mjs --reset    重新生成假数据
 // 演示数据只在 demo/ 里，不碰你的 data/hub.db 和 config.json。
-import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
+import fs from 'node:fs'; import path from 'node:path';
+import { STATE_ROOT } from './paths.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const D = path.join(ROOT, 'demo'), PROJ = path.join(D, 'projects');
+const D = path.join(STATE_ROOT, 'demo'), PROJ = path.join(D, 'projects');
 if (process.argv.includes('--reset')) fs.rmSync(D, { recursive: true, force: true });
 fs.mkdirSync(PROJ, { recursive: true });
 const cfg = { name: '麦田 · 演示', web: { port: 8788, key: 'demo' }, rootPath: PROJ, driver: 'direct', keepAlive: [],
