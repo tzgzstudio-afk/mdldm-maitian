@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+if [ "$1" = configure ]; then
+  mkdir -p /opt/maitian/state
+  chmod 1777 /opt/maitian/state
+  cat <<'EOF'
+
+麦田已安装到 /opt/maitian（代码）和命令 maitian。
+配置和数据库在运行用户的 ~/.local/share/maitian/，不会写进安装目录。
+
+下一步：
+  1. 准备发布助手（Apache-2.0，不在这个包里）：
+     git clone --depth 1 https://github.com/CzzzzzzJ/mdldm-maitian-publisher.git ~/mdldm-maitian-publisher
+     然后在 Chrome 的 chrome://extensions 加载这个目录。
+  2. maitian init
+  3. 在图形桌面里：systemctl --user enable --now maitian.service
+     需要开机就跑：sudo loginctl enable-linger "$USER"
+  4. 浏览器打开 init 打印的地址。登录平台、体检、发布都要你自己的账号，在本机做。
+
+说明：/opt/maitian/docs/ubuntu.md
+EOF
+fi

@@ -1,12 +1,12 @@
 // 专用 Chrome 的直连驱动：用调试端口实现插件代码依赖的那几个 chrome.* 接口，
 // 这样 麦田发布助手（插件）lib 下的适配器不用改就能在中控进程里跑。
-import { spawn, execFileSync } from 'node:child_process';
-import os from 'node:os'; import path from 'node:path'; import fs from 'node:fs';
+import { spawn } from 'node:child_process';
+import os from 'node:os'; import fs from 'node:fs';
 import { config } from './feishu.mjs';
+import { chromeBinary, bringToFront, listeningPid } from './platform.mjs';
 
 const PORT = config.chromePort || 9333;
 const PROFILE = (config.chromeProfile || '~/publish-hub/chrome-profile').replace(/^~/, os.homedir());
-const BIN = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 let ws = null, seq = 0;
@@ -19,16 +19,21 @@ const version = () => fetch(`http://127.0.0.1:${PORT}/json/version`, { signal: A
 
 // 启动专用 Chrome（已经在跑就直接用）。foreground=true 时把窗口带到前台（登录用）
 export async function launchChrome({ foreground = false } = {}) {
+  const bin = chromeBinary(config);
   try { await version(); } catch {
+    if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+      throw new Error('没有图形会话（DISPLAY 和 WAYLAND_DISPLAY 都为空）。登录和填写发布页需要桌面；已经采到库里的大屏不依赖 Chrome。');
+    }
     fs.mkdirSync(PROFILE, { recursive: true });
-    const args = [`--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PORT}`, '--no-first-run', '--no-default-browser-check',
-      '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--window-size=1500,1000'];
-    spawn(BIN, args, { detached: true, stdio: 'ignore' }).unref();
-    for (let i = 0; i < 30; i++) { await sleep(500); try { await version(); break; } catch { if (i === 29) throw new Error('专用 Chrome 没启动起来'); } }
+    const args = [`--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PORT}`, '--remote-allow-origins=*', '--no-first-run', '--no-default-browser-check',
+      '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-dev-shm-usage', '--window-size=1500,1000'];
+    if (process.platform === 'linux') args.push('--class=maitian-chrome');
+    spawn(bin, args, { detached: true, stdio: 'ignore' }).unref();
+    for (let i = 0; i < 30; i++) { await sleep(500); try { await version(); break; } catch { if (i === 29) throw new Error(`专用 Chrome 没启动起来（${bin}，端口 ${PORT}）`); } }
   }
-  if (foreground) { try { execFileSync('osascript', ['-e', `tell application "System Events" to set frontmost of (first process whose unix id is ${await pid()}) to true`]); } catch { /* 不影响 */ } }
+  if (foreground) bringToFront(await pid());
 }
-async function pid() { return execFileSync('lsof', ['-ti', `tcp:${PORT}`, '-sTCP:LISTEN']).toString().trim().split('\n')[0]; }
+async function pid() { return listeningPid(PORT); }
 
 let connecting = null;
 function connect() {

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+if [ "$1" = remove ] || [ "$1" = upgrade ]; then
+  echo "卸载或升级不会删除 ~/.local/share/maitian 里的配置、数据库和 Chrome 档案。"
+  echo "正在运行的用户服务请自行停止：systemctl --user disable --now maitian.service maitian-tunnel.service"
+fi

@@ -1,0 +1,15 @@
+Package: maitian
+Version: 0.3.0-1
+Section: net
+Priority: optional
+Architecture: amd64
+Maintainer: tzgzstudio-afk <tzgzstudio@gmail.com>
+Depends: ca-certificates, lsof, adduser
+Recommends: ffmpeg, cifs-utils, gvfs, xdg-utils, xdotool
+Suggests: cloudflared
+Homepage: https://github.com/tzgzstudio-afk/mdldm-maitian
+Description: 麦田自媒体多平台发布中控
+ 在 Ubuntu 上运行麦田：分发计划、专用 Chrome 填写各平台、数据大屏、
+ 飞书通知和 systemd 用户服务。平台适配器仍使用单独安装的麦田发布助手，
+ 本包装没有用空实现替换它们。包内附带官方 Node.js 22 linux-x64 运行时，
+ 因为 node:sqlite 需要 Node.js 22.5 以上，Ubuntu 22.04/24.04 源里的 Node 不够。

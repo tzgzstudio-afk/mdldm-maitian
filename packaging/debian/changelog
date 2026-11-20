@@ -1,0 +1,6 @@
+maitian (0.3.0-1) stable; urgency=medium
+
+  * Ubuntu 22.04/24.04 amd64 package: systemd user service, Linux Chrome,
+    CIFS/gio NAS mount, and ffmpeg thumbnails. macOS launchd path stays.
+
+ -- tzgzstudio-afk <tzgzstudio@gmail.com>  Fri, 20 Nov 2026 06:40:00 +0000

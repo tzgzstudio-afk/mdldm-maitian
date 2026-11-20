@@ -1,9 +1,11 @@
 // 状态落盘：期数、平台任务、操作日志
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const db = new DatabaseSync(process.env.MAITIAN_DB || path.join(ROOT, 'data', 'hub.db'));
+import { STATE_ROOT } from './paths.mjs';
+const DB = process.env.MAITIAN_DB || path.join(STATE_ROOT, 'data', 'hub.db');
+fs.mkdirSync(path.dirname(DB), { recursive: true });
+export const db = new DatabaseSync(DB);
 db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
 db.exec(`
 CREATE TABLE IF NOT EXISTS episodes (id TEXT PRIMARY KEY, episode INTEGER, name TEXT, dir TEXT, schedule TEXT, created_at TEXT);

@@ -6,16 +6,29 @@
 set -e
 DIR=${MAITIAN_HOME:-$HOME/maitian}
 say() { echo; echo "== $1"; }
+MAITIAN_REPO=${MAITIAN_REPO:-https://github.com/tzgzstudio-afk/mdldm-maitian.git}
+PUBLISHER_REPO=${MAITIAN_PUBLISHER_REPO:-https://github.com/CzzzzzzJ/mdldm-maitian-publisher.git}
 
 say "麦田 · 一行安装（装到 $DIR）"
-command -v git >/dev/null || { echo "需要 git：先装 Xcode 命令行工具（xcode-select --install）"; exit 1; }
-if ! command -v node >/dev/null; then echo "需要 Node.js 22.5 以上：brew install node，或去 https://nodejs.org 下载"; exit 1; fi
+if [ "$(uname -s)" = "Linux" ]; then
+  echo "检测到 Linux。想要带 Node.js 22 的安装包，请按 docs/ubuntu.md 构建或安装 deb。下面仍会把源码克隆到 $DIR，开机自启用 systemd。"
+fi
+command -v git >/dev/null || { echo "需要 git。macOS：xcode-select --install；Ubuntu：sudo apt install git"; exit 1; }
+if ! command -v node >/dev/null; then
+  if [ "$(uname -s)" = "Linux" ]; then echo "需要 Node.js 22.5 以上。Ubuntu 建议安装 deb（docs/ubuntu.md，包内自带 Node）；或从 https://nodejs.org 安装 22.x。"; else echo "需要 Node.js 22.5 以上：brew install node，或去 https://nodejs.org 下载"; fi
+  exit 1
+fi
 node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=5)?0:1)' || { echo "Node.js 版本是 $(node -v)，需要 22.5 以上"; exit 1; }
 
 mkdir -p "$DIR"; cd "$DIR"
-for R in mdldm-maitian mdldm-maitian-publisher; do
-  if [ -d "$R/.git" ]; then say "更新 $R"; git -C "$R" pull --ff-only -q; else say "下载 $R"; for i in 1 2 3; do git clone --depth 1 "https://github.com/CzzzzzzJ/$R.git" && break; echo "下载失败，第 $i 次重试"; rm -rf "$R"; sleep 3; done; [ -d "$R/.git" ] || { echo "$R 下载失败，检查网络后重跑这条命令"; exit 1; }; fi
-done
+clone_one() { # $1 目录名  $2 仓库地址
+  if [ -d "$1/.git" ]; then say "更新 $1"; git -C "$1" pull --ff-only -q; else
+    say "下载 $1"; for i in 1 2 3; do git clone --depth 1 "$2" "$1" && break; echo "下载失败，第 $i 次重试"; rm -rf "$1"; sleep 3; done
+    [ -d "$1/.git" ] || { echo "$1 下载失败，检查网络后重跑这条命令"; exit 1; }
+  fi
+}
+clone_one mdldm-maitian "$MAITIAN_REPO"
+clone_one mdldm-maitian-publisher "$PUBLISHER_REPO"
 
 say "麦田发布助手（Chrome 插件）"
 echo "Chrome 打开 chrome://extensions → 打开右上角「开发者模式」→「加载已解压的扩展程序」→ 选 $DIR/mdldm-maitian-publisher"

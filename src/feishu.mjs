@@ -1,7 +1,7 @@
-import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CFG = process.env.MAITIAN_CONFIG || path.join(ROOT, 'config.json');
-if (!fs.existsSync(CFG)) { console.error('还没有 config.json：先运行 node src/init.mjs（安装向导），或者 node src/demo.mjs 用假数据看看效果'); process.exit(1); }
+import fs from 'node:fs'; import path from 'node:path';
+import { STATE_ROOT } from './paths.mjs';
+const CFG = process.env.MAITIAN_CONFIG || path.join(STATE_ROOT, 'config.json');
+if (!fs.existsSync(CFG)) { console.error(`还没有配置文件 ${CFG}：先运行 node src/init.mjs（安装向导），或者 node src/demo.mjs 用假数据看看效果`); process.exit(1); }
 export const config = JSON.parse(fs.readFileSync(CFG, 'utf8'));
 
 // ---------- 文字 → 飞书卡片（2026-11-14） ----------
@@ -12,7 +12,7 @@ const STATE_COLOR = (s) => /已发布|已上线/.test(s) ? 'green' : /已定时|
 const esc = (s) => String(s).replace(/[<>]/g, (c) => ({ '<': '&lt;', '>': '&gt;' }[c]));
 const link = (s) => esc(s).replace(/https?:\/\/[^\s；;，,）)]+/g, (u) => `[${u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 42)}${u.length > 50 ? '…' : ''}](${u})`);
 
-function webUrl() { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'tunnel.json'), 'utf8')).url; } catch { return ''; } }
+function webUrl() { try { return JSON.parse(fs.readFileSync(path.join(STATE_ROOT, 'data', 'tunnel.json'), 'utf8')).url; } catch { return ''; } }
 
 export function toCard(text) {
   const lines = String(text).split('\n').map((l) => l.trim());

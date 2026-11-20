@@ -9,9 +9,13 @@
   "driver": "direct",
   "chromePort": 9333,
   "chromeProfile": "~/publish-hub/chrome-profile",
+  "chromeBin": "",
 
   "rootPath": "/Volumes/<NAS 共享名>/视频导出",
   "nasUrl": "smb://<用户名>@<NAS 地址>/<共享名>",
+  "nasMount": "",
+  "nasCredentials": "",
+  "nasVersion": "3.0",
 
   "batches": [["bilibili", "douyin"], ["xhs", "channels"], ["zsz", "x"], ["youtube"], ["instagram"]],
   "auto": ["zsz", "x", "youtube", "instagram"],
